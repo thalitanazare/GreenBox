@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "greenbox"
+version = "0.2.0"
+description = "Polynomial system identification (NARMAX, NARX, FIR, Volterra) with a Green low-complexity criterion"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Thalita Nazaré" }]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+mat = ["scipy>=1.10"]
+dev = ["pytest>=7", "scipy>=1.10", "playwright>=1.40"]
+
+[tool.setuptools]
+packages = ["greenbox"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

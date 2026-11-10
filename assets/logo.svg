@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GreenBox logo">
+  <title>GreenBox</title>
+  <!-- phase portrait of a nonlinear system: hysteresis loop with measured samples -->
+  <path d="M32 7V57M7 32H57" stroke="#BDC4A7" stroke-width="1.6"/>
+  <path d="M10 50C24 50 30 14 54 14C40 14 34 50 10 50Z" fill="none" stroke="#2A7F62" stroke-width="3.2" stroke-linejoin="round"/>
+  <g fill="#376996"><circle cx="10" cy="50" r="3"/><circle cx="54" cy="14" r="3"/><circle cx="25.5" cy="38" r="3"/><circle cx="38.5" cy="26" r="3"/></g>
+</svg>

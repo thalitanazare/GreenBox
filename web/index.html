@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GreenBox</title>
+<meta name="description" content="Polynomial system identification (NARMAX, NARX, FIR, Volterra) with a Green low-complexity criterion. Runs entirely in the browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 role=%22img%22 aria-label=%22GreenBox logo%22%3E%3Cpath d=%22M32 7V57M7 32H57%22 stroke=%22%23BDC4A7%22 stroke-width=%221.6%22/%3E%3Cpath d=%22M10 50C24 50 30 14 54 14C40 14 34 50 10 50Z%22 fill=%22none%22 stroke=%22%232A7F62%22 stroke-width=%223.2%22 stroke-linejoin=%22round%22/%3E%3Cg fill=%22%23376996%22%3E%3Ccircle cx=%2210%22 cy=%2250%22 r=%223%22/%3E%3Ccircle cx=%2254%22 cy=%2214%22 r=%223%22/%3E%3Ccircle cx=%2225.5%22 cy=%2238%22 r=%223%22/%3E%3Ccircle cx=%2238.5%22 cy=%2226%22 r=%223%22/%3E%3C/g%3E%3C/svg%3E">
+<style>/*@@STYLE@@*/</style>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="logo" aria-hidden="true"><path d="M32 7V57M7 32H57" stroke="#BDC4A7" stroke-width="1.6"/><path d="M10 50C24 50 30 14 54 14C40 14 34 50 10 50Z" fill="none" stroke="#2A7F62" stroke-width="3.2" stroke-linejoin="round"/><g fill="#376996"><circle cx="10" cy="50" r="3"/><circle cx="54" cy="14" r="3"/><circle cx="25.5" cy="38" r="3"/><circle cx="38.5" cy="26" r="3"/></g></svg>
+    <div>
+      <h1><span class="g">Green</span>Box</h1>
+      <p>Polynomial system identification with a low-complexity (Green) criterion</p>
+    </div>
+  </div>
+  <div id="status" class="status loading" role="status"><span class="dot"></span><span id="status-text">Starting Python runtime…</span></div>
+</header>
+
+<nav class="steps" id="steps">
+  <button data-step="home" class="active">Home</button>
+  <button data-step="data"><b>1</b> Data</button>
+  <button data-step="structure"><b>2</b> Model structure</button>
+  <button data-step="complexity"><b>3</b> Complexity</button>
+  <button data-step="identify"><b>4</b> Identification</button>
+  <button data-step="results" id="results-tab" disabled><b>5</b> Results</button>
+</nav>
+<div id="toolbar" class="toolbar" role="toolbar" aria-label="Main actions">
+  <span class="tb-group">Data</span>
+  <button class="tb" data-tb="open" title="Open a CSV, TXT, DAT or .mat file with the input and output signals"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Open data file…</span></button>
+  <select id="tb-example" class="tb-select" title="Load one of the example data sets">
+    <option value="">Load example…</option>
+    <option value="dc_motor">DC motor</option>
+    <option value="silverbox">Silverbox</option>
+    <option value="emps">EMPS (positioning system)</option>
+    <option value="lanl_three_story">Three-story structure (LANL)</option>
+    <option value="wiener_hammerstein">Wiener–Hammerstein</option>
+  </select>
+  <span class="tb-sep"></span>
+  <span class="tb-group">Model</span>
+  <button class="tb" data-tb="run" disabled><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5 3.5v9l7-4.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Run identification</span></button>
+  <button class="tb" data-tb="calibrate" title="Measure the cost of one addition and one multiplication on this computer (Complexity step)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 13.5a5.5 5.5 0 1 1 5.5-5.5M8 8l3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Calibrate this computer…</span></button>
+  <span class="tb-sep"></span>
+  <span class="tb-group">Results</span>
+  <button class="tb" data-tb="save" disabled><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 2.5h8l2 2V13.5H3zM5.5 2.5v3h4v-3M5 13.5v-4h6v4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Save results…</span></button>
+</div>
+
+<main>
+<!-- ============================== DATA ============================== -->
+<!-- ============================== HOME ============================== -->
+<section class="step active" id="step-home">
+  <div class="hero">
+    <div class="hero-text">
+      <span class="eyebrow">System identification · Green computing</span>
+      <h2>Models that are accurate<br><span>and cheap to run.</span></h2>
+      <p>GreenBox learns dynamic models of a system from measured input and output data and, besides the most accurate model,
+        finds <b>Green</b> models that need far fewer arithmetic operations at every sample, saving computation, energy and CO₂e.</p>
+      <div class="row wrap">
+        <button class="btn hero-cta" data-goto="data">Start here →</button>
+        <button class="btn hero-ghost" data-learn="learn-models">The models</button>
+        <button class="btn hero-ghost" data-learn="learn-complexity">Complexity criteria</button>
+      </div>
+    </div>
+    <div class="hero-art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="hero-logo" aria-hidden="true"><path d="M32 7V57M7 32H57" stroke="#BDC4A7" stroke-width="1.6"/><path d="M10 50C24 50 30 14 54 14C40 14 34 50 10 50Z" fill="none" stroke="#2A7F62" stroke-width="3.2" stroke-linejoin="round"/><g fill="#376996"><circle cx="10" cy="50" r="3"/><circle cx="54" cy="14" r="3"/><circle cx="25.5" cy="38" r="3"/><circle cx="38.5" cy="26" r="3"/></g></svg></div>
+  </div>
+
+  <div class="features">
+    <div class="feature"><span class="num">01</span><b>Identify</b><p>NARX, NARMAX, ARX, FIR and Volterra models. Candidate terms are ranked by how much of the output they explain; structure and size are chosen by free-run simulation.</p></div>
+    <div class="feature"><span class="num">02</span><b>Weigh the cost</b><p>Every term costs additions and multiplications. Decision methods on the Pareto front of accuracy and complexity each pick one model.</p></div>
+    <div class="feature"><span class="num">03</span><b>Compare</b><p>All models are validated on unseen data and placed on the complexity–error plane, with execution time and CO₂e per sample.</p></div>
+  </div>
+
+  <div class="card demo">
+    <div class="demo-head">
+      <div>
+        <span class="eyebrow dark">Interactive example</span>
+        <h2>Choose a decision method and weight</h2>
+        <p class="hint">A nonlinear system with known equation, excited by random steps and measured with noise (σ = 0.02).
+          600 samples identify the models, 400 unseen samples validate them.</p>
+      </div>
+      <div class="demo-control">
+        <div class="demo-weights" id="demo-wtext"></div>
+        <div class="row wrap" id="demo-methods" role="group" aria-label="decision method"></div>
+        <div class="slider-row" id="demo-wrow">
+          <span>cost</span>
+          <input type="range" id="demo-w" min="0" max="1" step="0.1" value="0.5" aria-label="accuracy weight">
+          <span>accuracy</span>
+        </div>
+      </div>
+    </div>
+    <div class="kpis" id="demo-stats"></div>
+    <div class="grid two">
+      <div><h3>Pareto front on the test part</h3><div id="plot-demo-trade" class="plot"></div></div>
+      <div><h3>Free-run simulation on validation data</h3><div id="plot-demo-sim" class="plot"></div></div>
+    </div>
+    <div class="grid two eqs">
+      <div><h3>True system</h3><div id="demo-true" class="equation"></div></div>
+      <div><h3 id="demo-eq-title">Identified Green model</h3><div id="demo-eq" class="equation"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LEARN: MODEL FAMILIES ======================= -->
+<section class="step learn" id="step-learn-models">
+  <div class="row between wrap"><button class="btn" data-back>← Back</button><span class="hint">Learn more · model families</span></div>
+  <article class="card prose">
+    <h2>Polynomial model families</h2>
+    <p>All families in GreenBox write the output as a sum of candidate terms (regressors) φ<sub>i</sub>, each a product of lagged signals, multiplied by an unknown coefficient θ<sub>i</sub>:</p>
+    <p class="math">y(k) = Σ<sub>i</sub> θ<sub>i</sub> φ<sub>i</sub>(k) + e(k),&nbsp;&nbsp; e.g. φ = y(k−1), u(k−2), y(k−1)·u(k−1), u(k−1)², …</p>
+    <p>The model is nonlinear in the signals but <b>linear in the parameters</b>, so θ is estimated by least squares, and the
+      <i>structure</i> (which terms to keep) is chosen with the forward orthogonal least squares algorithm and the
+      Error Reduction Ratio (ERR), the fraction of output variance explained by each term
+      <a class="ref" href="#r-Kor88">[Kor88]</a> <a class="ref" href="#r-Bil89">[Bil89]</a> <a class="ref" href="#r-Che89">[Che89]</a>.
+      General references are the books by Ljung <a class="ref" href="#r-Lju99">[Lju99]</a> and Billings <a class="ref" href="#r-Bil13">[Bil13]</a>.
+      The families differ only in which signals and powers may appear.</p>
+
+    <div class="table-wrap"><table class="plain">
+      <thead><tr><th>Family</th><th>Past outputs y</th><th>Nonlinear terms</th><th>Noise model e</th><th>Typical use</th></tr></thead>
+      <tbody>
+        <tr><td>FIR</td><td>no</td><td>no</td><td>no</td><td>linear, stable systems with short memory</td></tr>
+        <tr><td>ARX</td><td>yes</td><td>no</td><td>no</td><td>linear dynamics, compact models</td></tr>
+        <tr><td>ARMAX</td><td>yes</td><td>no</td><td>yes</td><td>linear dynamics with coloured noise</td></tr>
+        <tr><td>Volterra</td><td>no</td><td>yes</td><td>no</td><td>nonlinear systems with fading memory, no feedback</td></tr>
+        <tr><td>NARX</td><td>yes</td><td>yes</td><td>no</td><td>general nonlinear dynamics</td></tr>
+        <tr><td>NARMAX</td><td>yes</td><td>yes</td><td>yes</td><td>nonlinear dynamics with coloured or nonlinear noise</td></tr>
+      </tbody></table></div>
+
+    <h3>FIR: finite impulse response</h3>
+    <p class="math">y(k) = θ<sub>0</sub> + Σ<sub>j=0..n<sub>u</sub></sub> b<sub>j</sub> u(k−j)</p>
+    <p>The output is a weighted window of past inputs: the truncated impulse response of a linear system. FIR models are always
+      stable and easy to estimate, but need many lags when the system responds slowly, because they have no output feedback <a class="ref" href="#r-Lju99">[Lju99]</a>.</p>
+
+    <h3>ARX and ARMAX: linear models with output feedback</h3>
+    <p class="math">y(k) = Σ<sub>i</sub> a<sub>i</sub> y(k−i) + Σ<sub>j</sub> b<sub>j</sub> u(k−j) + e(k) &nbsp;[+ Σ<sub>l</sub> c<sub>l</sub> e(k−l) for ARMAX]</p>
+    <p>Feeding back past outputs captures slow or oscillatory dynamics with a few coefficients. ARMAX adds a moving-average model of the noise,
+      which avoids biased parameters when the disturbance is coloured <a class="ref" href="#r-Lju99">[Lju99]</a>.</p>
+
+    <h3>Volterra series (truncated)</h3>
+    <p class="math">y(k) = h<sub>0</sub> + Σ<sub>j</sub> h<sub>1</sub>(j) u(k−j) + Σ<sub>j₁≤j₂</sub> h<sub>2</sub>(j₁,j₂) u(k−j₁) u(k−j₂) + …</p>
+    <p>The nonlinear extension of the impulse response: kernels of increasing order multiply products of past inputs.
+      It represents systems with fading memory without output feedback <a class="ref" href="#r-Sch80">[Sch80]</a>,
+      but the number of terms grows quickly with degree and memory, which is exactly where a complexity criterion matters.</p>
+
+    <h3>NARX and NARMAX</h3>
+    <p class="math">y(k) = F[ y(k−1), …, y(k−n<sub>y</sub>), u(k−1), …, u(k−n<sub>u</sub>), e(k−1), …, e(k−n<sub>e</sub>) ] + e(k)</p>
+    <p>The Nonlinear AutoRegressive Moving Average model with eXogenous inputs represents a wide class of discrete-time nonlinear systems
+      <a class="ref" href="#r-Leo85">[Leo85]</a> <a class="ref" href="#r-Bil13">[Bil13]</a>. With F a polynomial of degree ℓ, it contains all the
+      families above as special cases. NARX drops the noise terms. In NARMAX the e(k) terms form a <b>noise model</b>, estimated iteratively from the
+      residuals (extended least squares); it removes bias from the process parameters, but e(k) is set to zero in free-run simulation.</p>
+
+    <h3>Choosing the structure</h3>
+    <p>Keeping too many terms gives over-parametrised models that fit the data but can show spurious dynamics or diverge in simulation
+      <a class="ref" href="#r-Agu95">[Agu95]</a>. The classical procedure ranks terms by ERR and chooses the size with an information criterion such as AIC
+      <a class="ref" href="#r-Aka74">[Aka74]</a>, computed on one-step-ahead residuals. Because a good one-step predictor is not necessarily a good simulator,
+      GreenBox by default selects the size and structure by <b>free-run simulation error</b> on test part of the estimation data, in the spirit of
+      simulation-error-based selection <a class="ref" href="#r-Pir03">[Pir03]</a>. Residual correlation tests check the final model
+      <a class="ref" href="#r-Bil83">[Bil83]</a>, and the same reference proposes the r<sub>y′y′²</sub> test GreenBox uses to detect nonlinearity.</p>
+    <p id="green-identification">GreenBox identifies only Green models, one per decision method on the Pareto front of test error and
+      complexity <a class="ref" href="#r-Cha83">[Cha83]</a>. With the structure search on, the Green search visits
+      structures (degree and lags) on the estimation data; for every structure, candidate models from several term orders are simulated on the
+      test part of the estimation data, and all of them form the Green candidate set. A candidate is admissible when it does not diverge and reaches a minimum
+      test R² (0.75 by default, the "very good" level NSE &gt; 0.75 of <a class="ref" href="#r-Mor07">[Mor07]</a>; free-run R² is the NSE).
+      With the simulation error E and the complexity C scaled to 0–1 over the admissible candidates, each method picks one of them:
+      the cheapest (min C); the ε-constraint (the cheapest with E ≤ ε, ε = 0.5 by default); compromise programming, the candidate closest to the
+      ideal point (E, C) = (0, 0) with the distance (w<sub>E</sub><sup>p</sup>E<sup>p</sup> + w<sub>C</sub><sup>p</sup>C<sup>p</sup>)<sup>1/p</sup>
+      for p = 1 (weighted sum), p = 2 (Euclidean) and p = ∞ (Tchebycheff, max(w<sub>E</sub>E, w<sub>C</sub>C)), with equal weights by default;
+      and the most accurate (min E). Ties go to the cheaper candidate. Every method returns a Pareto-optimal candidate: when several methods agree,
+      the choice does not depend on the decision rule.
+      The classical Green procedure, which ranks terms and chooses the size from the one-step error reduction, remains available as an option.</p>
+    <p><b>The reference model.</b> The most accurate Green model ignores cost. The results report the change in complexity and in validation
+      error of every Green model relative to it.</p>
+
+    <h2 id="example-systems">Example systems</h2>
+    <p>All examples are measured data from real systems. The DC motor comes from the SysIdentPy package <a class="ref" href="#r-Lac20">[Lac20]</a>; the
+      others are benchmarks of the nonlinear system identification community, distributed at
+      <a href="https://www.nonlinearbenchmark.org" target="_blank" rel="noopener">nonlinearbenchmark.org</a> <a class="ref" href="#r-NLB">[NLB]</a>.
+      Please cite the original reference when you use them. The source of the loaded example is also shown under the data plot and under the results.
+      Because these data belong to their authors, GreenBox does not export the measured signals of the examples: the <i>Data</i> button of those
+      figures opens the original source instead, where the data can be obtained under their own terms. Figures, models and results can be exported as usual.</p>
+    <h3>DC motor</h3>
+    <p>Angular velocity of a DC motor driven by a two-level (0/5 V) input, the case study distributed with the SysIdentPy package
+      <a class="ref" href="#r-Lac20">[Lac20]</a>. The data are decimated by 500 (500 samples); the first 250 are used for estimation and the rest for validation, as in the
+      original Green-Box study <a class="ref" href="#r-Naz23">[Naz23]</a>. Because the input takes only two values, u² = u after scaling, so such terms are redundant.
+      The response is clearly nonlinear: the best polynomial model simulates with about 90% less error than the best linear one.</p>
+    <h3>Silverbox</h3>
+    <p>An electronic circuit that emulates a mass–spring–damper with a cubic hardening spring (a Duffing oscillator), measured at about 610 Hz
+      <a class="ref" href="#r-Wig13">[Wig13]</a>. GreenBox uses 10 000 samples of the filtered Gaussian excitation for estimation and 20 000 samples of the multisine
+      experiments for validation. The nonlinearity is mild but essential: linear models reach R² ≈ 0.90, cubic NARX models above 0.99.
+      The estimation signal is small and barely excites the nonlinearity (on the test part even linear models reach R² ≈ 0.999), so a structure
+      chosen on estimation data alone can be less accurate on the larger validation signals: the example therefore starts from the structure listed below.
+      Source: nonlinearbenchmark.org <a class="ref" href="#r-NLB">[NLB]</a>.</p>
+    <h3>EMPS (electro-mechanical positioning system)</h3>
+    <p>A prismatic joint of an industrial robot, driven by a DC motor through a ball screw, with nonlinear friction. The input is the motor force and
+      the output is the position of the carriage. GreenBox uses the estimation and test records of the benchmark, decimated from 1 kHz to 100 Hz
+      (2485 samples each) <a class="ref" href="#r-Jan19">[Jan19]</a>. Because the position integrates the velocity, long output lags are needed.
+      Source: nonlinearbenchmark.org <a class="ref" href="#r-NLB">[NLB]</a>.</p>
+    <h3>Three-story structure (LANL)</h3>
+    <p>An aluminium frame of three floors on rails, excited at the base by an electrodynamic shaker, built at Los Alamos National Laboratory for
+      structural health monitoring <a class="ref" href="#r-Fig09">[Fig09]</a>. The input is the shaker force and the output is the acceleration of the
+      third floor, sampled at 320 Hz (8192 samples). GreenBox uses the undamaged state: test 1 for estimation and test 2 for validation. Autoregressive
+      models of such responses are the standard damage-sensitive features of this data set; a cheap and accurate reference model is what a monitoring
+      system evaluates continuously.</p>
+    <h3>Wiener–Hammerstein</h3>
+    <p>An electronic circuit made of a linear filter, a static diode-based nonlinearity and a second linear filter (a Wiener–Hammerstein block structure),
+      excited by filtered Gaussian noise and sampled at 51.2 kHz <a class="ref" href="#r-Sch09">[Sch09]</a>. GreenBox uses the first 10 000 samples of the
+      estimation record for estimation and the first 20 000 samples of the test record for validation. Source: nonlinearbenchmark.org
+      <a class="ref" href="#r-NLB">[NLB]</a>.</p>
+    <h3 id="example-structures">Recommended structure of each model family</h3>
+    <p>For every example and family, <code>tools/tune_examples.py</code> tried a grid of degrees and lags and kept the smallest structure whose classical
+      model (terms ranked by ERR, size by free-run simulation) is within 0.005 of the best validation R². Loading an example sets the NARX structure below (with <i>Use the structure from step 2</i>);
+      choosing another family in step 2 sets that family's structure. Values: degree d, output lags n<sub>y</sub>, input lags n<sub>u</sub>,
+      noise lags n<sub>e</sub>, and the validation R² and number of terms of that model.</p>
+    <div class="table-wrap"><table id="example-structures-table"></table></div>
+
+    <h2>References</h2>
+    <ol class="refs">
+      <li id="r-Agu95">[Agu95] L. A. Aguirre, S. A. Billings. Dynamical effects of overparametrization in nonlinear models. <i>Physica D</i>, 80, 1995. <a href="https://doi.org/10.1016/0167-2789(94)00166-N" target="_blank" rel="noopener">doi:10.1016/0167-2789(94)00166-N</a></li>
+      <li id="r-Aka74">[Aka74] H. Akaike. A new look at the statistical model identification. <i>IEEE Trans. Automatic Control</i>, 19(6), 1974. <a href="https://doi.org/10.1109/TAC.1974.1100705" target="_blank" rel="noopener">doi:10.1109/TAC.1974.1100705</a></li>
+      <li id="r-Bil83">[Bil83] S. A. Billings, W. S. F. Voon. Structure detection and model validity tests in the identification of nonlinear systems. <i>IEE Proc. D</i>, 130(4), 1983. <a href="https://doi.org/10.1049/ip-d.1983.0034" target="_blank" rel="noopener">doi:10.1049/ip-d.1983.0034</a></li>
+      <li id="r-Bil89">[Bil89] S. A. Billings, S. Chen, M. J. Korenberg. Identification of MIMO non-linear systems using a forward-regression orthogonal estimator. <i>Int. J. Control</i>, 49(6), 1989. <a href="https://doi.org/10.1080/00207178908559767" target="_blank" rel="noopener">doi:10.1080/00207178908559767</a></li>
+      <li id="r-Bil13">[Bil13] S. A. Billings. <i>Nonlinear System Identification: NARMAX Methods in the Time, Frequency, and Spatio-Temporal Domains</i>. Wiley, 2013. <a href="https://doi.org/10.1002/9781118535561" target="_blank" rel="noopener">doi:10.1002/9781118535561</a></li>
+      <li id="r-Cha83">[Cha83] V. Chankong, Y. Y. Haimes. <i>Multiobjective Decision Making: Theory and Methodology</i>. North-Holland, New York, 1983.</li>
+      <li id="r-Che89">[Che89] S. Chen, S. A. Billings, W. Luo. Orthogonal least squares methods and their application to non-linear system identification. <i>Int. J. Control</i>, 50(5), 1989. <a href="https://doi.org/10.1080/00207178908953472" target="_blank" rel="noopener">doi:10.1080/00207178908953472</a></li>
+      <li id="r-Kor88">[Kor88] M. Korenberg, S. A. Billings, Y. P. Liu, P. J. McIlroy. Orthogonal parameter estimation algorithm for non-linear stochastic systems. <i>Int. J. Control</i>, 48(1), 1988. <a href="https://doi.org/10.1080/00207178808906169" target="_blank" rel="noopener">doi:10.1080/00207178808906169</a></li>
+      <li id="r-Lac20">[Lac20] W. R. Lacerda, L. P. C. Andrade, S. C. P. Oliveira, S. A. M. Martins. SysIdentPy: a Python package for system identification using NARMAX models. <i>J. Open Source Software</i>, 5(54), 2020. <a href="https://doi.org/10.21105/joss.02384" target="_blank" rel="noopener">doi:10.21105/joss.02384</a></li>
+      <li id="r-Leo85">[Leo85] I. J. Leontaritis, S. A. Billings. Input-output parametric models for non-linear systems, Part II: stochastic non-linear systems. <i>Int. J. Control</i>, 41(2), 1985. <a href="https://doi.org/10.1080/0020718508961130" target="_blank" rel="noopener">doi:10.1080/0020718508961130</a></li>
+      <li id="r-Lju99">[Lju99] L. Ljung. <i>System Identification: Theory for the User</i>, 2nd ed. Prentice Hall, 1999.</li>
+      <li id="r-Naz23">[Naz23] T. Nazaré, K. Mahmoodi, E. Nepomuceno. Green-Box system identification and carbon footprint analysis for sustainable computing. <i>OCEANS 2023 – Limerick</i>, IEEE, 2023. <a href="https://doi.org/10.1109/OCEANSLimerick52467.2023.10244352" target="_blank" rel="noopener">doi:10.1109/OCEANSLimerick52467.2023.10244352</a></li>
+      <li id="r-NLB">[NLB] Nonlinear system identification benchmarks. <a href="https://www.nonlinearbenchmark.org" target="_blank" rel="noopener">www.nonlinearbenchmark.org</a></li>
+      <li id="r-Mor07">[Mor07] D. N. Moriasi, J. G. Arnold, M. W. Van Liew, R. L. Bingner, R. D. Harmel, T. L. Veith. Model evaluation guidelines for systematic quantification of accuracy in watershed simulations. <i>Trans. ASABE</i>, 50(3):885–900, 2007. <a href="https://doi.org/10.13031/2013.23153" target="_blank" rel="noopener">doi:10.13031/2013.23153</a></li>
+      <li id="r-Pir03">[Pir03] L. Piroddi, W. Spinelli. An identification algorithm for polynomial NARX models based on simulation error minimization. <i>Int. J. Control</i>, 76(17), 2003. <a href="https://doi.org/10.1080/00207170310001635419" target="_blank" rel="noopener">doi:10.1080/00207170310001635419</a></li>
+      <li id="r-Sch80">[Sch80] M. Schetzen. <i>The Volterra and Wiener Theories of Nonlinear Systems</i>. Wiley, 1980.</li>
+      <li id="r-Sch09">[Sch09] J. Schoukens, J. Suykens, L. Ljung. Wiener-Hammerstein benchmark. <i>15th IFAC Symposium on System Identification (SYSID)</i>, Saint-Malo, France, 2009.</li>
+      <li id="r-Wig13">[Wig13] T. Wigren, J. Schoukens. Three free data sets for development and benchmarking in nonlinear system identification. <i>European Control Conference</i>, 2013. <a href="https://doi.org/10.23919/ECC.2013.6669201" target="_blank" rel="noopener">doi:10.23919/ECC.2013.6669201</a></li>
+      <li id="r-Fig09">[Fig09] E. Figueiredo, G. Park, J. Figueiras, C. Farrar, K. Worden. Structural health monitoring algorithm comparisons using standard data sets. Report LA-14393, Los Alamos National Laboratory, 2009.</li>
+      <li id="r-Jan19">[Jan19] A. Janot, M. Gautier, M. Brunot. Data set and reference models of EMPS. <i>Nonlinear System Identification Benchmarks Workshop</i>, Eindhoven, 2019.</li>
+    </ol>
+  </article>
+</section>
+
+<!-- ======================= LEARN: COMPLEXITY ======================= -->
+<section class="step learn" id="step-learn-complexity">
+  <div class="row between wrap"><button class="btn" data-back>← Back</button><span class="hint">Learn more · complexity criteria</span></div>
+  <article class="card prose">
+    <h2>Why count arithmetic?</h2>
+    <p>Computing has an energy and carbon cost that grows with the amount of work done <a class="ref" href="#c-Lan20">[Lan20]</a>, and there is a growing call to report
+      efficiency alongside accuracy <a class="ref" href="#c-Sch20">[Sch20]</a>. An identified model is evaluated at every sample, often for years on embedded hardware, so a
+      model with fewer and cheaper operations saves energy every time it runs. GreenBox follows the Green-Box approach <a class="ref" href="#c-Naz23">[Naz23]</a>:
+      the cost of a model is measured by the arithmetic it needs per sample.</p>
+
+    <h2>Operation count</h2>
+    <p>A polynomial model with p terms (constant included), where term i has d<sub>i</sub> signal factors, needs per sample</p>
+    <p class="math">a = p − 1 additions,&nbsp;&nbsp; b = Σ<sub>i</sub> d<sub>i</sub> multiplications</p>
+    <p>because each coefficient multiplies its d<sub>i</sub> factors one by one. For example, θ<sub>0</sub> + θ<sub>1</sub>y(k−1) + θ<sub>2</sub>u(k−1)y(k−1)
+      has a = 2 and b = 3. The complexity weights the two operations:</p>
+    <p class="math">C = a·c<sub>+</sub> + b·c<sub>×</sub> &nbsp;∝&nbsp; a + ρ b,&nbsp;&nbsp; ρ = c<sub>×</sub> / c<sub>+</sub></p>
+    <p>The Green criterion min-max normalises C among the options it compares, so only ρ, the cost of a multiplication measured in additions, changes which model is selected.
+      Noise terms of NARMAX models are not counted, because they are not evaluated when the model is used.</p>
+
+    <h2>Theoretical criteria: bit-level cost of B-bit operands</h2>
+    <p>Adding two B-bit numbers takes on the order of B bit operations. Multiplication algorithms differ <a class="ref" href="#c-Knu">[Knu97]</a>:</p>
+    <div class="table-wrap"><table class="plain">
+      <thead><tr><th>Model</th><th>Multiplication cost M(B)</th><th>ρ = M(B)/B at B = 64</th><th>Idea</th></tr></thead>
+      <tbody>
+        <tr><td>Schoolbook</td><td>B²</td><td>64</td><td>long multiplication: every digit times every digit</td></tr>
+        <tr><td>Karatsuba</td><td>B<sup>log₂3</sup> ≈ B<sup>1.585</sup></td><td>11.4</td><td>three half-size products instead of four <a class="ref" href="#c-Kar63">[Kar63]</a></td></tr>
+        <tr><td>Toom–Cook 3-way</td><td>B<sup>log₃5</sup> ≈ B<sup>1.465</sup></td><td>6.9</td><td>splits operands in three parts, five products <a class="ref" href="#c-Coo69">[Coo69]</a></td></tr>
+        <tr><td>Schönhage–Strassen</td><td>B·log₂B·log₂log₂B</td><td>15.5</td><td>fast Fourier transform over rings <a class="ref" href="#c-Sch71">[Sch71]</a></td></tr>
+        <tr><td>Uniform</td><td>B</td><td>1</td><td>every operation costs the same (operation count)</td></tr>
+      </tbody></table></div>
+    <p>These are asymptotic models: FFT-based methods only win for very large B, and integer multiplication in O(B log B) was reached only recently
+      <a class="ref" href="#c-Har21">[Har21]</a>. Real processors multiply 64-bit floating-point numbers in dedicated hardware, so the theoretical ρ describes the intrinsic
+      difficulty of the operation rather than the time on a given machine. On current floating-point hardware an addition and a multiplication
+      take about the same time (ρ ≈ 1). GreenBox therefore uses the calibration of your own computer as default (it runs once at the
+      first start, see below); the uniform count and the theoretical models remain available for comparison. The original study
+      <a class="ref" href="#c-Naz23">[Naz23]</a> used the Karatsuba model, which remains available.</p>
+    <h3>Explore: ρ as a function of the word length</h3>
+    <div id="plot-rho" class="plot"></div>
+
+    <h2>Computational criterion: calibration on your computer</h2>
+    <p>The default calibration, <b>processor arithmetic</b>, measures the cost of the operations themselves on the processor of the computer running GreenBox:
+      a small program runs long chains of dependent 64-bit floating-point additions
+      (x = x + k, then again, …) and of multiplications. Each operation waits for the previous result, so the time per operation is the
+      <b>latency</b> of one addition t<sub>+</sub> and of one multiplication t<sub>×</sub>; loop, loads and stores run in parallel with the chain and do not add to it.
+      Eight independent chains give the <b>throughput</b> (cost when many operations run in parallel). Then ρ = t<sub>×</sub>/t<sub>+</sub>, and
+      C = a·t<sub>+</sub> + b·t<sub>×</sub> is the arithmetic time of one model evaluation in nanoseconds. The result describes the processor, not the browser:
+      Edge and Safari give the same values on the same machine (on an Apple M2, t<sub>+</sub> ≈ 0.86 ns and t<sub>×</sub> ≈ 1.15 ns, ρ ≈ 1.33).
+      In the browser the program is WebAssembly, translated by the browser into native instructions; the desktop application runs the same
+      chains as native machine code compiled in C and shipped with it, so it needs no internet connection and no compiler.</p>
+    <p>The <b>model evaluation</b> engines time whole polynomials with known (a, b) in Python or JavaScript and fit</p>
+    <p class="math">t = t<sub>0</sub> + t<sub>+</sub>·a + t<sub>×</sub>·b</p>
+    <p>by least squares. Their t<sub>+</sub> and t<sub>×</sub> are the cost per term and per factor <i>in that language</i>, including the interpreter's work, so they
+      describe how fast that implementation runs a model rather than the arithmetic (interpreted Python gives ρ between about 0.4 and 1, depending on the runtime).
+      Use them only if the model will run in that same implementation; to describe another target (embedded C, another machine), measure there and enter t<sub>+</sub> and t<sub>×</sub> manually.</p>
+
+    <h2>From complexity to carbon</h2>
+    <p>GreenBox converts complexity into time (directly for calibrated costs; for theoretical costs by anchoring one 64-bit multiplication to a reference time)
+      and multiplies by an emission rate in mgCO₂e per second of computing, in the spirit of the Green Algorithms calculator <a class="ref" href="#c-Lan20">[Lan20]</a>.
+      These are estimates for comparing models, not measured energy.</p>
+
+    <h2>References</h2>
+    <ol class="refs">
+      <li id="c-Coo69">[Coo69] S. A. Cook, S. O. Aanderaa. On the minimum computation time of functions. <i>Trans. American Mathematical Society</i>, 142, 1969. <a href="https://doi.org/10.1090/S0002-9947-1969-0249212-8" target="_blank" rel="noopener">doi:10.1090/S0002-9947-1969-0249212-8</a></li>
+      <li id="c-Har21">[Har21] D. Harvey, J. van der Hoeven. Integer multiplication in time O(n log n). <i>Annals of Mathematics</i>, 193(2), 2021. <a href="https://doi.org/10.4007/annals.2021.193.2.4" target="_blank" rel="noopener">doi:10.4007/annals.2021.193.2.4</a></li>
+      <li id="c-Kar63">[Kar63] A. Karatsuba, Yu. Ofman. Multiplication of multidigit numbers on automata. <i>Soviet Physics Doklady</i>, 7, 1963.</li>
+      <li id="c-Knu">[Knu97] D. E. Knuth. <i>The Art of Computer Programming, Vol. 2: Seminumerical Algorithms</i>, 3rd ed. Addison-Wesley, 1997.</li>
+      <li id="c-Lan20">[Lan20] L. Lannelongue, J. Grealey, M. Inouye. Green Algorithms: quantifying the carbon footprint of computation. <i>Advanced Science</i>, 8(12), 2021. <a href="https://doi.org/10.1002/advs.202100707" target="_blank" rel="noopener">doi:10.1002/advs.202100707</a></li>
+      <li id="c-Naz23">[Naz23] T. Nazaré, K. Mahmoodi, E. Nepomuceno. Green-Box system identification and carbon footprint analysis for sustainable computing. <i>OCEANS 2023 – Limerick</i>, IEEE, 2023. <a href="https://doi.org/10.1109/OCEANSLimerick52467.2023.10244352" target="_blank" rel="noopener">doi:10.1109/OCEANSLimerick52467.2023.10244352</a></li>
+      <li id="c-Sch71">[Sch71] A. Schönhage, V. Strassen. Schnelle Multiplikation großer Zahlen. <i>Computing</i>, 7, 1971. <a href="https://doi.org/10.1007/BF02242355" target="_blank" rel="noopener">doi:10.1007/BF02242355</a></li>
+      <li id="c-Sch20">[Sch20] R. Schwartz, J. Dodge, N. A. Smith, O. Etzioni. Green AI. <i>Communications of the ACM</i>, 63(12), 2020.</li>
+    </ol>
+  </article>
+</section>
+
+<section class="step" id="step-data">
+  <div class="grid two">
+    <div class="card">
+      <div class="row between wrap"><h2>Data source</h2><button class="btn small" data-learn="learn-models" data-anchor="example-systems">About the examples →</button></div>
+      <p class="hint">CSV, TXT, DAT (comma, semicolon, tab or space separated, optional header) or .mat. Files never leave this computer.</p>
+      <div class="row wrap">
+        <label class="btn primary file-btn">Open file(s)…<input type="file" id="file-input" multiple accept=".csv,.txt,.dat,.tsv,.mat,.xlsx,.xls"></label>
+        <button class="btn" data-example="dc_motor">Example: DC motor</button>
+        <button class="btn" data-example="silverbox">Example: Silverbox</button>
+        <button class="btn" data-example="emps">Example: EMPS</button>
+        <button class="btn" data-example="lanl_three_story">Example: Three-story structure</button>
+        <button class="btn" data-example="wiener_hammerstein">Example: Wiener–Hammerstein</button>
+      </div>
+      <p class="hint">The examples are published data sets of other authors. Their source is shown under the plot, and the measured signals are not
+        exported: use the link to the original data, and cite it.</p>
+      <details class="file-format"><summary>How should my data file look?</summary>
+        <div class="hint">
+          <p><b>One signal per column, one sample per row</b>, sampled at a constant rate. A file needs at least two columns: the input u(k) and the output y(k).
+            Other columns (time, other sensors) may be present; you choose which column is the input and which is the output under <i>Signals</i>.</p>
+          <pre class="file-example">u,y
+0.00,-0.013
+1.00,-0.011
+1.00, 0.042
+…</pre>
+          <ul>
+            <li><b>Header (recommended):</b> a first line with the column names, e.g. <code>u,y</code> or <code>voltage,speed</code>. The names are yours; without a header the columns are called col1, col2, …</li>
+            <li><b>Separator:</b> comma, semicolon, tab or spaces. With a semicolon or tab the decimal mark can be a comma (<code>1,5;2,25</code>, as saved by Excel in Portuguese or other European languages).</li>
+            <li><b>Files:</b> .csv, .txt, .dat, .tsv (UTF-8, UTF-16 or Latin-1) or MATLAB .mat (each vector or matrix column becomes a signal). Excel files (.xlsx) are not read: use <i>File → Save as → CSV</i>.</li>
+            <li><b>Ignored lines:</b> lines starting with # or %, and text lines such as a units line under the header. Empty cells and NaN are treated as missing; samples where u or y is missing are dropped.</li>
+            <li><b>Validation:</b> either one record that GreenBox splits in two (<i>One record, split in two</i>), or separate estimation and validation records, in the same file (e.g. columns <code>uEst,yEst,uVal,yVal</code>, which may have different lengths) or in two files.</li>
+            <li>Only single-input, single-output (SISO) models are identified. If the signals are stored in rows instead of columns, GreenBox transposes them.</li>
+          </ul>
+        </div>
+      </details>
+      <ul id="file-list" class="file-list"></ul>
+    </div>
+    <div class="card">
+      <h2>Signals</h2>
+      <div class="seg" id="mode-seg">
+        <label><input type="radio" name="mode" value="split" checked> One record, split in two</label>
+        <label><input type="radio" name="mode" value="separate"> Separate validation record</label>
+      </div>
+      <div class="form">
+        <label>Input u(k) <select id="sel-u"></select></label>
+        <label>Output y(k) <select id="sel-y"></select></label>
+        <label class="sep-only">Validation input <select id="sel-uv"></select></label>
+        <label class="sep-only">Validation output <select id="sel-yv"></select></label>
+        <label class="sep-only check"><input type="checkbox" id="continuation"> Validation record continues the estimation record</label>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Preprocessing</h2>
+    <div class="form inline">
+      <label>First sample <input type="number" id="pp-start" value="0" min="0"></label>
+      <label>Last sample <input type="number" id="pp-stop" placeholder="end" min="0"></label>
+      <label>Decimation (keep every) <input type="number" id="pp-step" value="1" min="1"></label>
+      <label>Normalisation
+        <select id="pp-norm">
+          <option value="none">None</option>
+          <option value="maxabs">Divide by max |x|</option>
+          <option value="zscore">Zero mean, unit variance</option>
+        </select>
+      </label>
+      <label class="split-only">Estimation samples <input type="number" id="pp-ntrain" min="2" placeholder="50%"></label>
+    </div>
+    <p class="hint" id="data-summary">Load a file or an example to begin.</p>
+    <div id="plot-data" class="plot tall"></div>
+    <p class="data-source" hidden></p>
+  </div>
+  <div class="card">
+    <div class="row between wrap">
+      <h2>Is the system linear?</h2>
+      <button class="btn" id="lin-run" disabled>Check linearity</button>
+    </div>
+    <p class="hint">Compares the best linear model with the best nonlinear polynomial model (free-run simulation on the test part of the estimation data) and runs the Billings–Voon correlation test r<sub>y′y′²</sub>. Also done automatically when you run the identification.</p>
+    <div id="lin-result"></div>
+  </div>
+  <div class="next"><button class="btn primary" data-goto="structure">Next: model structure →</button></div>
+</section>
+
+<!-- ============================ STRUCTURE ============================ -->
+<section class="step" id="step-structure">
+  <div class="card">
+    <div class="row between wrap"><h2>Model family</h2><button class="btn small" data-learn="learn-models">Learn more about the models →</button></div>
+    <div id="family-cards" class="choice-cards"></div>
+  </div>
+  <div class="grid two">
+    <div class="card">
+      <h2>Candidate terms</h2>
+      <div class="form inline">
+        <label>Nonlinearity degree <input type="number" id="st-degree" min="1" max="6" value="2"></label>
+        <label><span>Output lags n<sub>y</sub></span> <input type="number" id="st-lagy" min="0" max="60" value="2"></label>
+        <label><span>Input lags n<sub>u</sub></span> <input type="number" id="st-lagu" min="0" max="200" value="2"></label>
+        <label><span>Noise lags n<sub>e</sub></span> <input type="number" id="st-lage" min="0" max="30" value="0"></label>
+      </div>
+      <div class="form">
+        <label class="check"><input type="checkbox" id="st-ulag0"> Include u(k) (direct feed-through)</label>
+        <label class="check"><input type="checkbox" id="st-const" checked> Include constant term</label>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Candidate library</h2>
+      <p class="big" id="cand-count">–</p>
+      <details><summary>Show candidate terms</summary><div id="cand-list" class="term-cloud"></div></details>
+    </div>
+  </div>
+  <div class="next"><button class="btn" data-goto="data">← Data</button><button class="btn primary" data-goto="complexity">Next: complexity →</button></div>
+</section>
+
+<!-- ============================ COMPLEXITY ============================ -->
+<section class="step" id="step-complexity">
+  <div class="card">
+    <div class="row between wrap"><h2>How the cost of a model is measured</h2><button class="btn small" data-learn="learn-complexity">Learn more about complexity →</button></div>
+    <p class="hint">A model with <i>a</i> additions and <i>b</i> multiplications per sample costs
+      <b>C = a·c<sub>+</sub> + b·c<sub>×</sub></b> (equivalently C ∝ a + ρ b, with ρ = c<sub>×</sub>/c<sub>+</sub>).
+      The Green criterion min-max normalises C, so only ρ changes which model is selected.</p>
+    <div id="cost-cards" class="choice-cards"></div>
+    <div class="form inline">
+      <label>Word length B (bits) <input type="number" id="cx-bits" value="64" min="2" max="1024"></label>
+      <label>Karatsuba exponent <input type="number" id="cx-kexp" value="1.585" step="0.001"></label>
+    </div>
+  </div>
+  <div class="grid two">
+    <div class="card" id="calib-card">
+      <h2>Calibrate on this computer</h2>
+      <p class="hint"><b>Processor arithmetic</b> measures how long <i>one</i> addition and <i>one</i> multiplication of 64-bit floating-point numbers take on this computer's processor,
+        with no reading, storing or loop costs: a chain of dependent operations (each waits for the previous result) runs as native instructions
+        (WebAssembly in the browser, compiled C in the desktop application).
+        The <b>model evaluation</b> engines instead time whole polynomials with known (a, b) and fit t = t<sub>0</sub> + t<sub>+</sub>a + t<sub>×</sub>b; their t<sub>+</sub> and t<sub>×</sub> also contain the interpreter's per-term and per-factor work.</p>
+      <div class="form inline">
+        <label>Engine
+          <select id="cal-engine">
+            <option value="arith" selected>Processor arithmetic: pure + and × (recommended)</option>
+            <option value="python">Model evaluation in Python (includes interpreter costs)</option>
+            <option value="js">Model evaluation in JavaScript (includes loop and memory costs)</option>
+          </select>
+        </label>
+        <label>Duration
+          <select id="cal-dur">
+            <option value="0.02">Quick (~5 s)</option>
+            <option value="0.05" selected>Normal (~12 s)</option>
+            <option value="0.12">Thorough (~30 s)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row"><button class="btn primary" id="cal-run" disabled>Run calibration</button><span id="cal-progress" class="hint"></span></div>
+      <div id="cal-result" class="cal-result"></div>
+      <div id="plot-cal" class="plot"></div>
+      <details><summary>Enter timings manually</summary>
+        <div class="form inline">
+          <label><span>t<sub>+</sub> (ns)</span> <input type="number" id="cal-tadd" step="any" min="0"></label>
+          <label><span>t<sub>×</sub> (ns)</span> <input type="number" id="cal-tmult" step="any" min="0"></label>
+          <button class="btn" id="cal-manual">Use these timings</button>
+        </div>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Carbon estimate</h2>
+      <p class="hint">Carbon per sample = estimated execution time × emission rate. Calibrated costs are already times;
+        theoretical costs are converted by anchoring one multiplication to a reference time.</p>
+      <div class="form">
+        <label>Emission rate (mgCO₂e per second of computing) <input type="number" id="cx-emis" step="any" value="2.0301666667"></label>
+        <label>Reference multiplication time (s), theoretical models <input type="number" id="cx-tref" step="any" value="1.072312e-9"></label>
+      </div>
+      <p class="hint">Defaults: 121.81 mgCO₂e/min from the Green Algorithms calculator and a 64-bit multiplication measured at 1.07 ns. These are estimates, not measured energy.</p>
+    </div>
+  </div>
+  <div class="next"><button class="btn" data-goto="structure">← Structure</button><button class="btn primary" data-goto="identify">Next: identification →</button></div>
+</section>
+
+<!-- ============================ IDENTIFY ============================ -->
+<section class="step" id="step-identify">
+  <div class="grid two">
+    <div class="card">
+      <h2>Identification settings</h2>
+
+      <h3>Model structure</h3>
+      <div class="seg">
+        <label><input type="radio" name="struct-mode" value="search" checked> Search automatically (recommended)</label>
+        <label><input type="radio" name="struct-mode" value="manual"> Use the structure from step 2</label>
+      </div>
+      <div class="form inline search-only">
+        <label>Max. degree <input type="number" id="id-sdeg" value="3" min="1" max="5"></label>
+        <label>Max. lag <input type="number" id="id-slag" value="20" min="1" max="100"></label>
+        <label>Target R² <input type="number" id="id-target" value="0.75" min="0" max="1" step="0.01"></label>
+      </div>
+      <p class="hint search-only">Uses only the estimation data. A first scan of linear models (lags 1, 2, 4, 8, 15, … up to the max. lag) locates the
+        memory of the system; then, for every degree up to the limit, the search climbs the lags (1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, … up to the max. lag)
+        while the score improves, scoring each structure by its best Green candidate. Libraries above 400 terms are skipped. A warning is shown if the target R² is not reached.</p>
+      <p class="hint search-only"><b>Test part</b> = the last part of the <i>estimation</i> data (30 % by default), not used to estimate the parameters.
+        A model is scored by free-run simulation over the test part and over the whole estimation record (the lower R² counts). The validation data are
+        never used for any choice.</p>
+
+      <h3>Number of terms</h3>
+      <div class="form inline">
+        <label>Test share of estimation data <input type="number" id="id-hold" value="0.3" min="0.1" max="0.5" step="0.05"></label>
+        <label>Min terms <input type="number" id="id-min" value="2" min="1"></label>
+        <label>Max terms <input type="number" id="id-max" value="80" min="1"></label>
+      </div>
+      <p class="hint">The last part of the estimation data is held out: terms are ranked on the rest, and candidate models are compared by how well they <i>simulate</i> the held-out part. Validation data are never used for any choice.</p>
+      <label class="check"><input type="checkbox" id="id-keepdep"> Keep linearly dependent candidate terms (classical procedure)</label>
+
+      <div class="noise-only">
+        <h3>Noise model (extended least squares)</h3>
+        <div class="form inline">
+          <label>Noise terms <input type="number" id="id-noise" value="3" min="0"></label>
+          <label>ELS iterations <input type="number" id="id-els" value="10" min="0"></label>
+        </div>
+        <p class="hint">Noise terms remove bias from the process parameters; they are not used in free-run simulation and are not counted in the complexity.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Green models</h2>
+      <p class="hint">The admissible candidate models form a Pareto front of test error E and complexity C. Each decision method below
+        picks one of them as a Green model.</p>
+      <div class="form" id="id-methods">
+        <label class="check"><input type="checkbox" value="cheapest" checked> Cheapest · min C</label>
+        <label class="check"><input type="checkbox" value="epsilon" checked> ε-constraint · min C subject to E ≤ ε</label>
+        <label class="check"><input type="checkbox" value="weighted" checked> <span>Weighted sum (p = 1) · min w<sub>E</sub>E + w<sub>C</sub>C</span></label>
+        <label class="check"><input type="checkbox" value="euclidean" checked> <span>Euclidean (p = 2) · min √((w<sub>E</sub>E)² + (w<sub>C</sub>C)²)</span></label>
+        <label class="check"><input type="checkbox" value="tchebycheff" checked> <span>Tchebycheff (p = ∞) · min max(w<sub>E</sub>E, w<sub>C</sub>C)</span></label>
+        <label class="check"><input type="checkbox" value="accurate" checked> Most accurate · min E</label>
+      </div>
+      <h3>Accuracy weights w<sub>E</sub> (weighted sum, Euclidean, Tchebycheff)</h3>
+      <p class="hint">w<sub>C</sub> = 1 − w<sub>E</sub>. A range gives one model per weight for each of these methods.</p>
+      <div class="row wrap gw-presets" role="group" aria-label="weight presets">
+        <button class="btn small" data-gw="0.5,0.5,0.25">Equal weights (0.5)</button>
+        <button class="btn small" data-gw="0.25,0.75,0.25">0.25, 0.5, 0.75</button>
+        <button class="btn small" data-gw="0,1,0.1">0 to 1 by 0.1</button>
+      </div>
+      <div class="form inline">
+        <label><span>From</span> <input type="number" id="id-gw-from" value="0.5" min="0" max="1" step="0.05"></label>
+        <label><span>To</span> <input type="number" id="id-gw-to" value="0.5" min="0" max="1" step="0.05"></label>
+        <label><span>Step</span> <input type="number" id="id-gw-step" value="0.25" min="0.01" max="1" step="0.05"></label>
+      </div>
+      <p class="hint" id="id-gw-list"></p>
+      <div class="form inline">
+        <label><span>ε-constraint: bound ε on the scaled error</span> <input type="number" id="id-geps" value="0.5" min="0" max="1" step="0.05"></label>
+      </div>
+      <label>Green models chosen by
+        <select id="id-gsel">
+          <option value="simulation" selected>Free-run simulation on the test part (recommended)</option>
+          <option value="classical">One-step error reduction (classical procedure)</option>
+        </select>
+      </label>
+      <label class="gsim-only">Minimum test R² of Green models <input type="number" id="id-gmin" value="0.75" min="0" max="1" step="0.01"></label>
+      <details><summary>How the decision methods are used</summary>
+        <p class="hint gsim-only">For every structure its search visits, the Green identification
+          builds candidate models from several term orders (error reduction, error reduction per unit of cost, the classical Green order, and the
+          most accurate of these with terms removed one by one) and simulates each on the test part and over the whole estimation record. A candidate
+          is admissible when it simulates without diverging and reaches the minimum test R². The test error E = √(1 − R²) is scaled to 0–1
+          between the best admissible candidate and the limit set by the minimum R², the complexity C between the cheapest and the most costly
+          admissible candidate, so (E, C) = (0, 0) is the ideal point. Each method then picks one candidate; ties go to the cheaper one, so
+          every Green model is on the Pareto front. Validation data are never used for any choice.</p>
+        <p class="hint gsim-only"><b>Most accurate Green model.</b>
+          It is the reference the other Green models are compared with. A large model that is only slightly better on the test part can
+          generalise worse; a compromise method is usually the safer choice.</p>
+        <p class="hint gclassical-only">Terms are added one at a time, each minimising
+          w<sub>E</sub>·(1 − ERR) + w<sub>C</sub>·C, and each decision method chooses the number of terms with E the unexplained output
+          variance, where ERR, E and the complexity C are scaled to 0–1 among the options compared.
+          The one-step error can look almost perfect for models that drift or diverge in simulation, so check the validation results.</p>
+      </details>
+      <label>Residual-test lags <input type="number" id="id-rlags" value="25" min="5" max="200"></label>
+    </div>
+  </div>
+  <div class="card run-card">
+    <button class="btn primary large" id="run-btn" disabled>Run identification</button>
+    <div class="progress"><div id="run-bar"></div></div>
+    <p id="run-msg" class="hint"></p>
+  </div>
+</section>
+
+<!-- ============================ RESULTS ============================ -->
+<section class="step" id="step-results">
+  <div id="warnings"></div>
+  <div class="card" id="lin-card"><h2>System linearity</h2><div id="lin-result-res"></div></div>
+  <div class="card">
+    <div class="row between wrap">
+      <h2>Summary <span class="hint" id="res-cost-label"></span></h2>
+      <div class="row wrap">
+        <button class="btn small" id="dl-json">Download results (JSON)</button>
+        <button class="btn small" id="dl-csv">Download summary (CSV)</button>
+      </div>
+    </div>
+    <div class="row wrap res-view" id="res-view" role="group" aria-label="models shown"></div>
+    <div class="table-wrap"><table id="summary"></table></div>
+    <p class="hint">Click a row to inspect that model. <b>All methods</b> lists every distinct Green model once, with the decision methods
+      (and weights) that picked it; choose a method to see its models only.
+      ★ marks models on the Pareto front (complexity vs validation NRMSE). NRMSE = ‖y − ŷ‖ / ‖y − ȳ‖ and R² = 1 − NRMSE², both in free run on the validation data.</p>
+  </div>
+  <div class="card" id="search-card">
+    <h2>Structure search</h2>
+    <p class="hint" id="search-msg"></p>
+    <div class="table-wrap"><table id="search-table"></table></div>
+  </div>
+  <div class="grid two">
+    <div class="card"><h2>Free-run validation</h2><div id="plot-val" class="plot"></div></div>
+    <div class="card"><h2>Complexity vs error</h2><div id="plot-trade" class="plot"></div></div>
+    <div class="card"><h2>Pareto front and decision methods</h2><div id="plot-sweep" class="plot"></div></div>
+  </div>
+  <div class="card" id="model-card">
+    <div class="row between wrap">
+      <h2 id="model-title">Model</h2>
+      <div class="row wrap">
+        <button class="btn small" id="dl-model">Download model (CSV)</button>
+        <button class="btn small" id="copy-eq">Copy equation</button>
+      </div>
+    </div>
+    <div id="model-stats" class="stats"></div>
+    <h3 class="eq-title">Process model <span class="hint">· simulated in free run and counted in the complexity</span></h3>
+    <div id="equation" class="equation"></div>
+    <div id="noise-eq">
+      <h3 class="eq-title">Noise model <span class="hint">· e(k) terms, used only to estimate unbiased parameters; e(k) = 0 in free run, not counted in the complexity</span></h3>
+      <div id="noise-equation" class="equation noise"></div>
+    </div>
+    <div class="table-wrap"><table id="model-table"></table></div>
+    <div class="grid two">
+      <div><h3>Residual correlation tests (training, one-step-ahead)</h3><div id="plot-resid" class="plot"></div></div>
+      <div><h3 id="sel-title">Model size selection</h3><div id="plot-size" class="plot"></div></div>
+    </div>
+    <p class="data-source" hidden></p>
+  </div>
+</section>
+</main>
+
+<footer>GreenBox · runs locally in your browser with <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>.
+  Based on Nazaré, Mahmoodi &amp; Nepomuceno, “Green-Box System Identification and Carbon Footprint Analysis for Sustainable Computing”, OCEANS 2023.</footer>
+
+<div id="statusbar" class="statusbar"><span id="sb-text">Starting…</span><span class="tb-guide" id="tb-guide"></span></div>
+
+<script id="worker-src" type="text/plain">/*@@WORKER@@*/</script>
+<script id="py-sources" type="application/json">/*@@PYSOURCES@@*/</script>
+<script id="demo" type="application/json">/*@@DEMO@@*/</script>
+<script id="examples" type="application/json">/*@@EXAMPLES@@*/</script>
+<script>/*@@APP@@*/</script>
+</body>
+</html>
