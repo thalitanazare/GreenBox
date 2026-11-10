@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.DS_Store
+.vscode/
+.idea/
+dist/GreenBox-offline/
+dist/GreenBox-offline.zip
+tools/.cache/
+tools/tune_examples.json
+desktop/build/
+desktop/dist/
