@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GreenBox</title>
+<meta name="description" content="Polynomial system identification (NARMAX, NARX, ARX, ARMAX, FIR, Volterra) with a Green criterion that trades prediction error against arithmetic complexity.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #eef3ec; --surface: #ffffff; --text: #1C0118; --muted: #4f5450; --border: #dbe2d8;
+  --accent: #2A7F62; --accent-strong: #254D32; --accent-text: #ffffff; --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C0118; --surface: #26102a; --text: #eef0e6; --muted: #b3aeb6; --border: #443047;
+    --accent: #4fae8c; --accent-strong: #8fcfb4; --accent-text: #10070f; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 48px 16px 64px; }
+header { text-align: center; margin-bottom: 40px; }
+header img { width: min(360px, 90%); height: auto; }
+.lead { font-size: 1.15rem; color: var(--muted); max-width: 640px; margin: 16px auto 28px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.btn { display: inline-block; padding: 11px 20px; border-radius: var(--radius); text-decoration: none;
+  font-weight: 600; border: 1px solid var(--accent); color: var(--accent-strong); }
+.btn.primary { background: var(--accent); color: var(--accent-text); }
+.btn:hover { filter: brightness(1.08); }
+section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 24px; margin-top: 20px; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; color: var(--accent-strong); }
+p { margin: 0 0 10px; }
+ol, ul { margin: 0; padding-left: 22px; }
+a { color: var(--accent); }
+code { font-size: .92em; }
+footer { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 36px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="assets/logo-wordmark.svg" alt="GreenBox">
+    <p class="lead">GreenBox identifies polynomial models (NARMAX, NARX, ARX, ARMAX, FIR and truncated Volterra) from input/output data and selects them by a <strong>Green</strong> criterion that trades prediction error against arithmetic complexity, the cost of evaluating the model at every sample.</p>
+    <div class="actions">
+      <a class="btn primary" href="dist/GreenBox.html">Open GreenBox in the browser</a>
+      <a class="btn" href="https://github.com/thalitanazare/GreenBox/releases/latest">Download</a>
+      <a class="btn" href="https://github.com/thalitanazare/GreenBox">Source code</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>Runs in the browser</h2>
+    <p>The interface runs entirely in the web browser with Python compiled to WebAssembly (Pyodide). There is nothing to install, and data files never leave the computer.</p>
+  </section>
+
+  <section>
+    <h2>Workflow</h2>
+    <ol>
+      <li><strong>Data</strong>: CSV/TXT/DAT or <code>.mat</code>, one record split into estimation and validation or a separate validation record. Five examples are built in.</li>
+      <li><strong>Model structure</strong>: family, nonlinearity degree, lags, feed-through and constant term, or an automatic structure search.</li>
+      <li><strong>Complexity</strong>: how a multiplication is weighted against an addition, including calibration on your own computer.</li>
+      <li><strong>Identification</strong>: one Green model per decision method on the Pareto set (cheapest, ε-constraint, weighted sum, Euclidean, Tchebycheff, most accurate).</li>
+      <li><strong>Results</strong>: free-run validation, complexity vs. NRMSE with the Pareto front, model equations, residual tests and CSV/JSON export.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Downloads</h2>
+    <ul>
+      <li><strong>Windows</strong>: installer (<code>GreenBox-Setup.exe</code>) or portable (<code>GreenBox-Windows.zip</code>) from the <a href="https://github.com/thalitanazare/GreenBox/releases/latest">latest release</a>. Runs with native Python and needs no internet.</li>
+      <li><strong>Python package</strong>: the algorithms in <code>greenbox/</code> depend only on NumPy and can be used without the GUI. See the <a href="https://github.com/thalitanazare/GreenBox#readme">README</a>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Citation</h2>
+    <p>Please cite the software through its Zenodo record: <a href="https://doi.org/10.5281/zenodo.23687749">doi:10.5281/zenodo.23687749</a>.</p>
+  </section>
+
+  <footer>GreenBox is released under the MIT licence.</footer>
+</main>
+</body>
+</html>
